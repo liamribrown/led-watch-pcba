@@ -51,6 +51,7 @@ cd projects/led-watch/firmware && ./build.sh
   was checked. The ATtiny1617 is the fallback chip.
 - The documents were written by a small team of AI agents working under one person's direction,
   so they refer to "000" (the human) and agent numbers (003 Hardware, 004 Firmware, 007 Review).
+
 ## Licence
 
 Software (firmware, simulator, generator scripts): **MIT**. Hardware design and documents:
