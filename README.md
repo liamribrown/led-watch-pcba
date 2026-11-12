@@ -28,6 +28,7 @@ the review tables at the end) and in `docs/reviews/`.
 | `projects/led-watch/export.sh` | ERC/DRC gate, then gerbers, JLCPCB BOM and placement files |
 | `projects/led-watch/firmware/` | Firmware, tests, build and flash scripts (see its README) |
 | `projects/watch-sim/` | The browser simulator |
+| `docs/led-watch-schematic.pdf` | Schematic (A3, one sheet, generated from the KiCad file) |
 | `docs/reviews/` | Independent design reviews of the spec and board |
 
 ## Build it
