@@ -1,0 +1,15 @@
+Copyright (c) 2026 Liam Brown
+
+This repository has two licences, by folder:
+
+Software: MIT (LICENSES/MIT.txt)
+  projects/led-watch/firmware/
+  projects/watch-sim/   (except board-geometry.json, which is hardware data)
+  projects/led-watch/tools/   (the Python that generates the board)
+
+Hardware and documentation: CERN-OHL-P-2.0 (LICENSES/CERN-OHL-P-2.0.txt)
+  projects/led-watch/ (KiCad files, SPEC.md, PINMAP.md, export.sh), except the folders above
+  projects/watch-sim/public/board-geometry.json
+  docs/
+
+SPDX identifiers: MIT, CERN-OHL-P-2.0.
