@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>LED watch simulator</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --text: #16181d; --muted: #5d6573; --line: #dfe3e8;
+    --accent: #3451d1; --accent-text: #ffffff; --ok: #137a3f; --warn: #8a5a00; --warn-bg: #fdf1d8;
+    --btn: #eceff3; --btn-on: #3451d1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --card: #171a21; --text: #e8eaee; --muted: #9aa3b2; --line: #2a2f3a;
+      --accent: #8ea2ff; --accent-text: #0f1115; --ok: #5fd08f; --warn: #f2c46b; --warn-bg: #352812;
+      --btn: #232834; --btn-on: #8ea2ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 0.8rem; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .sub { margin: 0; color: var(--muted); }
+  .note { margin: 14px 0; padding: 10px 14px; border-radius: 10px; background: var(--warn-bg); color: var(--warn); font-size: 0.9rem; }
+  .note b { color: inherit; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .stack > * + * { margin-top: 14px; }
+  #stage { position: relative; aspect-ratio: 1 / 1; max-height: 78vh; width: 100%; border-radius: 12px; overflow: hidden; background: #0b0d11; touch-action: none; border: 1px solid var(--line); }
+  #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #stage .hint { position: absolute; left: 10px; bottom: 8px; right: 10px; color: #8d96a6; font-size: 0.78rem; pointer-events: none; text-shadow: 0 1px 2px #000; }
+  #stage .views { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; color: #9aa3b2; }
+  button, select { font: inherit; color: var(--text); }
+  .btn { background: var(--btn); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  .btn.small { padding: 4px 10px; font-size: 0.85rem; background: rgba(30,34,44,0.85); color: #e8eaee; border-color: #3a4150; }
+  .btn:active, .btn.down { background: var(--btn-on); color: var(--accent-text); }
+  .btn:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .big { min-width: 76px; text-align: center; font-weight: 600; font-size: 1.05rem; padding: 12px 18px; }
+  label { display: block; font-size: 0.9rem; margin: 12px 0 2px; }
+  label .val { float: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .small-note { color: var(--muted); font-size: 0.8rem; margin: 2px 0 0; }
+  dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
+  dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88rem; }
+  .lines { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin-top: 4px; }
+  .line { text-align: center; border: 1px solid var(--line); border-radius: 8px; padding: 3px 0; font-size: 0.72rem; line-height: 1.25; }
+  .line b { display: block; font-size: 0.95rem; }
+  .line.h { background: #c0392b; color: #fff; border-color: #c0392b; }
+  .line.l { background: #2c6fb7; color: #fff; border-color: #2c6fb7; }
+  .line.z { color: var(--muted); }
+  .frame { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; margin-top: 4px; }
+  .tick { text-align: center; border: 1px solid var(--line); border-radius: 4px; padding: 2px 0; font-size: 0.68rem; color: var(--muted); }
+  .tick.on { color: var(--text); border-color: var(--accent); }
+  .tick.cur { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  details { margin-top: 18px; } summary { cursor: pointer; font-weight: 600; }
+  details ul { margin: 8px 0 0; padding-left: 20px; color: var(--muted); }
+  .error { color: #d64545; }
+  footer { margin-top: 22px; color: var(--muted); font-size: 0.82rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>LED watch simulator</h1>
+  <p class="sub">A 38 mm round watch board: 72 LEDs as hands, driven by the watch's own firmware code.</p>
+  <div class="note"><b>A simulation of the firmware logic, not of the electronics.</b> The firmware's C code (UI, timekeeping, clock face, LED map, tilt, battery) runs here compiled to WebAssembly; only the chip's hardware layer is replaced by a simulated one. There is no current, brightness or battery-life model.</div>
+
+  <div class="layout">
+    <div>
+      <div id="stage">
+        <div class="views">
+          <button class="btn small" data-view="top">Top</button>
+          <button class="btn small" data-view="bottom">Bottom</button>
+          <button class="btn small" data-view="angle">3D</button>
+        </div>
+        <div id="loading">Loading…</div>
+        <div class="hint">Drag to orbit, scroll or pinch to zoom. The buttons are on the bottom side: click them in 3D or use the controls.</div>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i style="background:#ffb000"></i>minute LEDs (0-59)</span>
+        <span><i style="background:#ff3b30"></i>hour LEDs (60-71)</span>
+        <span>12 o'clock is up</span>
+      </div>
+    </div>
+
+    <div class="stack">
+      <section class="card" aria-label="Controls">
+        <h2>Controls</h2>
+        <div class="row">
+          <button class="btn big" id="btnA" aria-label="Button A (2 o'clock)">A</button>
+          <button class="btn big" id="btnB" aria-label="Button B (4 o'clock)">B</button>
+          <button class="btn big" id="btnAB" aria-label="Buttons A and B together">A + B</button>
+        </div>
+        <p class="small-note">Press and hold. Tap A to show the time. Hold A + B for <span class="c" data-c="UI_SET_HOLD_MS" data-fmt="s">…</span> to set the time: A steps the hour, B the minute (hold B to repeat). Keys: A, B.</p>
+
+        <label for="tilt">Wrist angle <span class="val" id="tiltVal"></span></label>
+        <input type="range" id="tilt" min="-90" max="90" value="90" step="1">
+        <p class="small-note">Changing the angle is the motion that wakes the watch; it shows the time when the wrist ends up face up and level. 90° = arm hanging down.</p>
+
+        <label for="vbat">Supply voltage fed to the firmware <span class="val" id="vbatVal"></span></label>
+        <input type="range" id="vbat" step="10">
+        <p class="small-note">Below <span class="c" data-c="VBAT_EMPTY_MV" data-fmt="mv">…</span> the watch stays dark except a short blink at 12. This only sets the voltage the firmware reads; it is not a battery model.</p>
+
+        <div class="row" style="margin-top:12px"><button class="btn" id="restart">Replace battery (restart)</button></div>
+        <p class="small-note">The watch has no idea what time it is after power-up: it starts in set mode at 12:00 for <span class="c" data-c="UI_FIRST_SET_MS" data-fmt="s">…</span>, then goes to sleep. Use A and B to set the time.</p>
+
+        <label for="speed">Clock speed</label>
+        <select id="speed" aria-label="Clock speed">
+          <option value="1">Real time</option>
+          <option value="60">60× (1 min per second)</option>
+          <option value="3600">3600× (1 h per second)</option>
+        </select>
+        <p class="small-note">Faster speeds only make the sleeping clock run faster.</p>
+      </section>
+
+      <section class="card" aria-label="Watch state">
+        <h2>What the firmware is doing</h2>
+        <dl>
+          <dt>Time</dt><dd class="mono" id="sTime">–</dd>
+          <dt>Chip</dt><dd id="sAwake">–</dd>
+          <dt>UI state</dt><dd id="sState">–</dd>
+          <dt>Showing</dt><dd id="sDisp">–</dd>
+          <dt>LEDs lit</dt><dd class="mono" id="sLeds">–</dd>
+        </dl>
+        <h2 style="margin-top:14px">Charlieplex lines</h2>
+        <div class="lines" id="lines"></div>
+        <p class="small-note"><span style="color:#c0392b">■</span> driven high &nbsp; <span style="color:#2c6fb7">■</span> driven low &nbsp; □ floating (input). One LED is lit at a time: high on its anode line, low on its cathode line, all others floating.</p>
+        <h2 style="margin-top:14px">Scan frame <span class="mono" id="frameInfo"></span></h2>
+        <div class="frame" id="frame"></div>
+        <p class="small-note">The LED lit on each tick of the frame the firmware repeats; the eye averages them.</p>
+      </section>
+    </div>
+  </div>
+
+  <details>
+    <summary>What is real and what is simulated</summary>
+    <ul>
+      <li><b>Real firmware code:</b> <span class="mono">ui.c, timekeep.c, clockface.c, led_map.c, tilt.c, battery.c</span>, unmodified.</li>
+      <li><b>Replaced by simulation:</b> the hardware layer (<span class="mono">main.c, twi.c, lis2dh12.c</span>): timers, sleep, pins, ADC, the accelerometer and the buttons.</li>
+      <li><b>Not modelled:</b> LED currents, brightness in the real world, battery capacity or life, crystal drift, contact bounce, EMC. LED glow here only shows each LED's share of the scan frame, scaled up so it is visible on screen.</li>
+      <li><b>Board:</b> positions come from the PCB layout; part shapes are simplified boxes, not the real 3D models.</li>
+      <li>All numbers on this page (timeouts, thresholds, LED counts) are read from the firmware headers at build time.</li>
+    </ul>
+  </details>
+  <footer>Simulation by the agent workspace. Runs entirely in your browser; nothing is sent anywhere.</footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+        integrity="sha512-dLxUelApnYxpLt6K2iomGngnHO83iUvZytA3YjDUCjT0HDOHKXnVYdf3hU4JjM8uEhxf9nD1/ey98U3t2vZ0qQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="app.js"></script>
+</body>
+</html>
